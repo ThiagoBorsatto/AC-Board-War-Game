@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>WAR Pedagógico - Conquista da Europa</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0a1628 0%, #1a2a3a 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', 'MedievalSharp', 'Georgia', serif;
+            padding: 20px;
+        }
+
+        .game-container {
+            background: #1a0f08;
+            border-radius: 48px;
+            padding: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+            border: 2px solid #d4af37;
+        }
+
+        .game-panel {
+            background: linear-gradient(145deg, #2a2418, #1e1810);
+            border-radius: 32px;
+            padding: 20px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
+        }
+
+        /* Header */
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+            background: rgba(0,0,0,0.5);
+            padding: 15px 25px;
+            border-radius: 60px;
+        }
+
+        .player-info {
+            background: linear-gradient(135deg, #2a4a6a, #1a3a5a);
+            padding: 10px 20px;
+            border-radius: 40px;
+            color: #ffd700;
+            border: 1px solid #ffd700;
+        }
+
+        .resources {
+            display: flex;
+            gap: 20px;
+        }
+
+        .resource-card {
+            background: #2a1a0a;
+            border-radius: 40px;
+            padding: 8px 20px;
+            color: #ffaa44;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 2px solid #d4af37;
+        }
+
+        /* Mapa da Europa estilizado com SVG */
+        .europe-map {
+            background: linear-gradient(135deg, #2a6a4a 0%, #1a4a2a 100%);
+            border-radius: 40px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 3px solid #d4af37;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .map-svg {
+            width: 100%;
+            height: auto;
+            filter: drop-shadow(0 5px 15px rgba(0,0,0,0.5));
+        }
+
+        .territory {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .territory:hover {
+            filter: brightness(1.1);
+            stroke: #ffd700;
+            stroke-width: 3;
+        }
+
+        .territory.player {
+            filter: drop-shadow(0 0 8px #4a9eff);
+        }
+
+        .territory.ai {
+            filter: drop-shadow(0 0 5px #ff4444);
+        }
+
+        /* Painel de tropas */
+        .troops-panel {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .troop-card {
+            background: linear-gradient(145deg, #f0e6d0, #e0d0b0);
+            border-radius: 20px;
+            padding: 15px;
+            text-align: center;
+            min-width: 150px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid #d4af37;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .troop-card:active {
+            transform: scale(0.96);
+        }
+
+        .troop-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,215,0,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .troop-card:hover::before {
+            left: 100%;
+        }
+
+        .troop-icon {
+            font-size: 3rem;
+        }
+
+        .troop-cost {
+            background: #d4af37;
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            margin-top: 8px;
+            font-weight: bold;
+            color: #1a0f08;
+        }
+
+        /* Animação de ataque */
+        @keyframes attackFlash {
+            0% { filter: brightness(1); }
+            50% { filter: brightness(2) drop-shadow(0 0 20px red); }
+            100% { filter: brightness(1); }
+        }
+
+        @keyframes arrowFly {
+            0% { transform: translate(0, 0) scale(0); opacity: 0; }
+            20% { transform: scale(1.5); opacity: 1; }
+            80% { transform: translate(var(--dx), var(--dy)) scale(1); opacity: 1; }
+            100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+        }
+
+        .attack-animation {
+            position: fixed;
+            pointer-events: none;
+            z-index: 1000;
+            font-size: 2rem;
+            animation: arrowFly 0.6s ease-out forwards;
+        }
+
+        .battle-log {
+            background: #0a0a0a;
+            border-radius: 20px;
+            padding: 15px;
+            margin: 15px 0;
+            color: #ffdd99;
+            font-family: monospace;
+            max-height: 100px;
+            overflow-y: auto;
+            border: 1px solid #d4af37;
+        }
+
+        .btn {
+            background: #d4af37;
+            color: #1a0f08;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 40px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin: 5px;
+        }
+
+        .btn:active {
+            transform: translateY(2px);
+        }
+
+        .btn-primary {
+            background: #2a6a3a;
+            color: #ffd700;
+        }
+
+        /* Modal Quiz */
+        .quiz-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .quiz-card {
+            background: linear-gradient(145deg, #f5e6d0, #e8d5b5);
+            border-radius: 60px;
+            padding: 40px;
+            max-width: 550px;
+            width: 90%;
+            text-align: center;
+            border: 4px solid #d4af37;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .quiz-option {
+            background: #2a1a0a;
+            color: #ffdd99;
+            padding: 12px;
+            margin: 10px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .quiz-option:hover {
+            background: #d4af37;
+            color: #1a0f08;
+            transform: scale(1.02);
+        }
+
+        .turn-indicator {
+            background: #d4af37;
+            color: #1a0f08;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+    </style>
+</head>
+<body>
+<div class="game-container">
+    <div class="game-panel">
+        <div id="gameRoot"></div>
+    </div>
+</div>
+
+<script>
+    // ==================== CONFIGURAÇÃO DO MUNDO ====================
+    const REINOS = [
+        { nome: "REINO DO NORTE", cor: "#4a9eff", regiao: "Escandinávia", icone: "❄️", jogador: true },
+        { nome: "REINO DO SUL", cor: "#ff6a4a", regiao: "Península Ibérica", icone: "🔥", jogador: false },
+        { nome: "REINO DO LESTE", cor: "#6aff4a", regiao: "Eslavos", icone: "🌲", jogador: false },
+        { nome: "REINO DO OESTE", cor: "#ffaa4a", regiao: "Ilhas Britânicas", icone: "⚡", jogador: false }
+    ];
+
+    const TROPAS = {
+        arqueiro: { nome: "🏹 Arqueiro", custo: 30, atk: 40, def: 10, icone: "🏹" },
+        lanceiro: { nome: "🔱 Lanceiro", custo: 50, atk: 45, def: 35, icone: "🔱" },
+        cavaleiro: { nome: "🐎 Cavaleiro", custo: 80, atk: 60, def: 50, icone: "🐎" }
+    };
+
+    // Territórios Europeus
+    const territories = [
+        { id: "norte", nome: "Escandinávia", x: 350, y: 80, dono: 0, tropas: { arqueiro: 5, lanceiro: 3, cavaleiro: 2 } },
+        { id: "gra-bretanha", nome: "Grã-Bretanha", x: 280, y: 150, dono: 3, tropas: { arqueiro: 4, lanceiro: 2, cavaleiro: 2 } },
+        { id: "franca", nome: "França", x: 350, y: 220, dono: 3, tropas: { arqueiro: 3, lanceiro: 3, cavaleiro: 2 } },
+        { id: "iberia", nome: "Península Ibérica", x: 260, y: 280, dono: 1, tropas: { arqueiro: 4, lanceiro: 4, cavaleiro: 1 } },
+        { id: "italia", nome: "Itália", x: 420, y: 280, dono: 1, tropas: { arqueiro: 3, lanceiro: 2, cavaleiro: 2 } },
+        { id: "alemanha", nome: "Germânia", x: 450, y: 180, dono: 0, tropas: { arqueiro: 4, lanceiro: 3, cavaleiro: 2 } },
+        { id: "polonia", nome: "Polônia", x: 550, y: 200, dono: 2, tropas: { arqueiro: 3, lanceiro: 4, cavaleiro: 1 } },
+        { id: "balcanicos", nome: "Balcãs", x: 520, y: 300, dono: 2, tropas: { arqueiro: 3, lanceiro: 3, cavaleiro: 2 } },
+        { id: "russia", nome: "Rússia Ocidental", x: 680, y: 140, dono: 2, tropas: { arqueiro: 5, lanceiro: 4, cavaleiro: 3 } }
+    ];
+
+    // Quiz pedagógico
+    const quizDB = [
+        { pergunta: "Se cada CAVALEIRO custa 80 de ouro, quantos você pode comprar com 320 de ouro?", opcoes: ["2", "3", "4", "5"], correta: 2, conceito: "Divisão" },
+        { pergunta: "Um ARQUEIRO custa 30. Qual o custo de 8 arqueiros?", opcoes: ["210", "220", "240", "260"], correta: 2, conceito: "Multiplicação" },
+        { pergunta: "Se você tem 4 lanceiros (custo 50 cada) e 3 arqueiros (30 cada), qual o gasto total?", opcoes: ["270", "290", "310", "330"], correta: 1, conceito: "Soma" },
+        { pergunta: "2 cavaleiros custam 160. Quantos cavaleiros com 400 de ouro?", opcoes: ["3", "4", "5", "6"], correta: 2, conceito: "Regra de três" },
+        { pergunta: "15% de ataque bônus sobre 200 de dano. Qual o dano final?", opcoes: ["210", "220", "230", "240"], correta: 2, conceito: "Porcentagem" },
+        { pergunta: "Proporção 3 arqueiros:1 cavaleiro. Com 12 arqueiros, quantos cavaleiros?", opcoes: ["2", "3", "4", "5"], correta: 2, conceito: "Proporção" }
+    ];
+
+    // Estado do jogo
+    let currentPlayer = 0;
+    let gold = 250;
+    let playerTroops = { arqueiro: 5, lanceiro: 3, cavaleiro: 2 };
+    let turn = 1;
+    let gameOver = false;
+    let message = "⚔️ Clique em um território inimigo no mapa para atacar! ⚔️";
+    let waitingForQuiz = false;
+    let currentQuiz = null;
+    let attackSource = null;
+    let attackTarget = null;
+    let attackingTerritory = null;
+    let consecutiveErrors = 0;
+    let battleLog = [];
+
+    function addLog(msg) {
+        battleLog.unshift(`📜 ${msg}`);
+        if (battleLog.length > 8) battleLog.pop();
+    }
+
+    function getTerritoryPower(terr, type = 'atk') {
+        let power = 0;
+        power += terr.tropas.arqueiro * (type === 'atk' ? TROPAS.arqueiro.atk : TROPAS.arqueiro.def);
+        power += terr.tropas.lanceiro * (type === 'atk' ? TROPAS.lanceiro.atk : TROPAS.lanceiro.def);
+        power += terr.tropas.cavaleiro * (type === 'atk' ? TROPAS.cavaleiro.atk : TROPAS.cavaleiro.def);
+        if (type === 'atk') power += Math.floor(power * 0.1);
+        return power;
+    }
+
+    // Animação de ataque visual
+    function createAttackAnimation(fromX, fromY, toX, toY, callback) {
+        const dx = toX - fromX;
+        const dy = toY - fromY;
+        const arrow = document.createElement('div');
+        arrow.className = 'attack-animation';
+        arrow.innerHTML = '⚔️💥⚔️';
+        arrow.style.left = fromX + 'px';
+        arrow.style.top = fromY + 'px';
+        arrow.style.setProperty('--dx', dx + 'px');
+        arrow.style.setProperty('--dy', dy + 'px');
+        document.body.appendChild(arrow);
+        
+        // Piscar territórios
+        const sourceEl = document.querySelector(`[data-terr-id="${attackSource?.id}"]`);
+        const targetEl = document.querySelector(`[data-terr-id="${attackTarget?.id}"]`);
+        if (sourceEl) sourceEl.style.animation = 'attackFlash 0.3s ease';
+        if (targetEl) targetEl.style.animation = 'attackFlash 0.3s ease';
+        
+        setTimeout(() => {
+            if (sourceEl) sourceEl.style.animation = '';
+            if (targetEl) targetEl.style.animation = '';
+            arrow.remove();
+            if (callback) callback();
+        }, 600);
+    }
+
+    function showQuiz() {
+        currentQuiz = { ...quizDB[Math.floor(Math.random() * quizDB.length)] };
+        waitingForQuiz = true;
+        render();
+    }
+
+    function checkQuizAnswer(selectedIdx) {
+        if (!waitingForQuiz) return;
+        
+        const isCorrect = (selectedIdx === currentQuiz.correta);
+        
+        if (isCorrect) {
+            addLog(`✅ ACERTOU! ${attackTarget.nome} conquistado! +30 ouro, +1 arqueiro`);
+            attackTarget.dono = currentPlayer;
+            gold += 30;
+            playerTroops.arqueiro++;
+            message = `✅ VITÓRIA! ${attackTarget.nome} agora é seu! +30 ouro!`;
+            consecutiveErrors = 0;
+        } else {
+            consecutiveErrors++;
+            gold = Math.max(0, gold - 10);
+            addLog(`❌ ERROU! Resposta: ${currentQuiz.opcoes[currentQuiz.correta]}. Perdeu 10 ouro.`);
+            message = `❌ Derrota! A resposta correta era: ${currentQuiz.opcoes[currentQuiz.correta]}. -10 ouro.`;
+            
+            if (consecutiveErrors >= 3 && currentPlayer === 0) {
+                let playerTerritories = territories.filter(t => t.dono === 0);
+                if (playerTerritories.length > 1) {
+                    let lost = playerTerritories[Math.floor(Math.random() * playerTerritories.length)];
+                    let newOwner = (lost.id === "norte") ? 3 : (lost.id === "alemanha") ? 2 : 1;
+                    lost.dono = newOwner;
+                    addLog(`😭 3 erros consecutivos! Perdeu ${lost.nome}!`);
+                    message += ` Perdeu ${lost.nome} por 3 erros seguidos!`;
+                }
+            }
+        }
+        
+        waitingForQuiz = false;
+        checkVictory();
+        nextTurn();
+        render();
+    }
+
+    function initiateAttackFromTerritory(sourceTerr, targetTerr) {
+        if (gameOver || waitingForQuiz) return false;
+        if (targetTerr.dono === currentPlayer) {
+            message = "Este território já é seu!";
+            render();
+            return false;
+        }
+        
+        const attackerPower = getTerritoryPower(sourceTerr, 'atk');
+        const defenderPower = getTerritoryPower(targetTerr, 'def');
+        
+        if (attackerPower <= defenderPower) {
+            message = `💪 Força insuficiente! Seu exército: ${attackerPower} vs ${defenderPower} inimigo. Recrute mais!`;
+            addLog(`Falha ao atacar ${targetTerr.nome} (${attackerPower} < ${defenderPower})`);
+            render();
+            return false;
+        }
+        
+        attackSource = sourceTerr;
+        attackTarget = targetTerr;
+        
+        // Obter coordenadas para animação
+        const sourceCoords = { x: sourceTerr.x, y: sourceTerr.y };
+        const targetCoords = { x: targetTerr.x, y: targetTerr.y };
+        
+        createAttackAnimation(sourceCoords.x, sourceCoords.y, targetCoords.x, targetCoords.y, () => {
+            showQuiz();
+        });
+        
+        return true;
+    }
+
+    function recruitTroop(type) {
+        if (gameOver || currentPlayer !== 0) {
+            message = "Aguarde seu turno!";
+            render();
+            return;
+        }
+        const custo = TROPAS[type].custo;
+        if (gold >= custo) {
+            gold -= custo;
+            playerTroops[type]++;
+            addLog(`💰 Recrutou 1 ${TROPAS[type].nome} (${custo} ouro)`);
+            message = `✨ Recrutado ${TROPAS[type].nome}! ✨`;
+        } else {
+            message = `💰 Ouro insuficiente! Faltam ${custo - gold}`;
+        }
+        render();
+    }
+
+    function endTurn() {
+        if (gameOver || waitingForQuiz || currentPlayer !== 0) return;
+        addLog(`🔚 Turno ${turn} finalizado`);
+        nextTurn();
+    }
+
+    function nextTurn() {
+        if (gameOver) return;
+        
+        currentPlayer = (currentPlayer + 1) % 4;
+        
+        if (currentPlayer === 0) {
+            turn++;
+            const ownedCount = territories.filter(t => t.dono === 0).length;
+            gold += ownedCount * 25;
+            addLog(`🌞 Turno ${turn} - Seu reino! +${ownedCount * 25} ouro`);
+            message = `🌞 Turno ${turn} - Seu reino! Recrute e ataque!`;
+            consecutiveErrors = 0;
+        } else {
+            message = `🤖 Turno: ${REINOS[currentPlayer].nome} ${REINOS[currentPlayer].icone} está agindo...`;
+            render();
+            setTimeout(() => aiMove(), 1500);
+        }
+        render();
+    }
+
+    function aiMove() {
+        if (gameOver || currentPlayer === 0) return;
+        
+        const aiTerritories = territories.filter(t => t.dono === currentPlayer);
+        const enemies = territories.filter(t => t.dono !== currentPlayer);
+        
+        if (aiTerritories.length === 0 || enemies.length === 0) {
+            nextTurn();
+            return;
+        }
+        
+        // IA escolhe melhor ataque
+        let bestAttack = null;
+        let bestPowerDiff = -1;
+        
+        for (let src of aiTerritories) {
+            for (let tgt of enemies) {
+                const power = getTerritoryPower(src, 'atk');
+                const def = getTerritoryPower(tgt, 'def');
+                if (power > def && (power - def) > bestPowerDiff) {
+                    bestPowerDiff = power - def;
+                    bestAttack = { src, tgt };
+                }
+            }
+        }
+        
+        if (bestAttack && Math.random() > 0.3) {
+            addLog(`⚔️ ${REINOS[currentPlayer].nome} ataca ${bestAttack.tgt.nome}!`);
+            bestAttack.tgt.dono = currentPlayer;
+            message = `⚔️ ${REINOS[currentPlayer].nome} conquistou ${bestAttack.tgt.nome}!`;
+        } else {
+            addLog(`⏸️ ${REINOS[currentPlayer].nome} recrutou tropas e se preparou.`);
+        }
+        
+        checkVictory();
+        nextTurn();
+    }
+
+    function checkVictory() {
+        const playerCount = territories.filter(t => t.dono === 0).length;
+        if (playerCount >= 7) {
+            gameOver = true;
+            message = "🏆 VITÓRIA! Você unificou a Europa com sabedoria! 🏆";
+            addLog("🏆 REINO DO NORTE VENCEU! PARABÉNS!");
+            render();
+            return true;
+        }
+        const aiDominant = territories.filter(t => t.dono !== 0).length;
+        if (aiDominant >= 8 && !gameOver) {
+            gameOver = true;
+            message = "💀 Derrota! Os outros reinos dominaram a Europa.";
+            render();
+            return true;
+        }
+        return false;
+    }
+
+    function resetGame() {
+        territories.forEach(t => {
+            if (t.id === "norte" || t.id === "alemanha") t.dono = 0;
+            else if (t.id === "iberia" || t.id === "italia") t.dono = 1;
+            else if (t.id === "polonia" || t.id === "balcanicos" || t.id === "russia") t.dono = 2;
+            else t.dono = 3;
+            t.tropas = { arqueiro: 4, lanceiro: 3, cavaleiro: 2 };
+        });
+        territories.find(t => t.id === "norte").tropas = { arqueiro: 6, lanceiro: 4, cavaleiro: 3 };
+        
+        currentPlayer = 0;
+        gold = 250;
+        playerTroops = { arqueiro: 5, lanceiro: 3, cavaleiro: 2 };
+        turn = 1;
+        gameOver = false;
+        message = "🔄 Jogo reiniciado! Conquiste a Europa!";
+        consecutiveErrors = 0;
+        battleLog = [];
+        addLog("🎮 NOVA PARTIDA - Conquiste territórios resolvendo desafios!");
+        render();
+    }
+
+    // Renderização do mapa SVG da Europa
+    function renderMap() {
+        return `
+            <svg viewBox="0 0 900 500" class="map-svg" style="background: linear-gradient(135deg, #2a6a4a, #1a5a3a); border-radius: 30px;">
+                <!-- Mar -->
+                <rect x="0" y="0" width="900" height="500" fill="#2a6a8a" opacity="0.3"/>
+                
+                <!-- Mapa estilizado da Europa -->
+                <!-- Escandinávia -->
+                <path d="M330,50 Q380,40 400,70 Q420,100 400,130 Q370,150 340,130 Q310,110 320,80 Z" fill="${REINOS[territories.find(t=>t.id==='norte').dono].cor}" stroke="#d4af37" stroke-width="2" class="territory" data-terr-id="norte" opacity="0.9"/>
+                <text x="365" y="100" font-size="12" fill="white" text-anchor="middle">Escandinávia</text>
+                <text x="365" y="115" font-size="10" fill="#ffd700">🏹${territories.find(t=>t.id==='norte').tropas.arqueiro} 🔱${territories.find(t=>t.id==='norte').tropas.lanceiro} 🐎${territories.find(t=>t.id==='norte').tropas.cavaleiro}</text>
+                
+                <!-- Grã-Bretanha -->
+                <path d="M240,140 Q260,130 280,150 Q290,180 270,200 Q250,210 240,190 Q230,170 240,140 Z" fill="${REINOS[territories.find(t=>t.id==='gra-bretanha').dono].cor}" stroke="#d4af37" stroke-width="2" class="territory" data-terr-id="gra-bretanha" opacity="0.9"/>
+                <text x="262" y="170" font-size="11" fill="white" text-anchor="middle">Grã-Bretanha</text>
+                <text x="262" y="185" font-size="9" fill="#ffd700">🏹${territories.find(t=>t.id==='gra-bretanha').tropas.arqueiro} 🔱${territories.find(t=>t.id==='gra-bretanha').tropas.lanceiro} 🐎${territories.find(t=>t.id==='gra-bretanha').tropas.cavaleiro}</text>
+                
+                <!-- França -->
+                <path d="M340,190 Q380,180 400,210 Q410,250 390,270 Q360,280 340,260 Q320,240 340,190 Z" fill="${REINOS[territories.find(t=>t.id==='franca').dono].cor}" stroke="#d4af37" stroke-width="2" class="territory" data-terr-id="franca" opacity="0.9"/>
+                <text x="368" y="235" font-size="12" fill="white" text-anchor="middle">França</text>
+                <text x="368" y="250" font-size="9" fill="#ffd700">🏹${territories.find(t=>t.id==='franca').tropas.arqueiro} 🔱${territories.find(t=>t.id==='franca').tropas.lanceiro} 🐎${territories.find(t=>t.id==='franca').tropas.cavaleiro}</text>
+                
+                <!-- Ibéria -->
+                <path d="M250,280 Q280,270 310,290 Q320,330 300,350 Q270,360 250,340 Q230,320 250,280 Z" fill="${REINOS[territories.find(t=>t.id==='iberia').dono].cor}" stroke="#d4af37" stroke-width="2" class="territory" data-terr-id="iberia" opacity="0.9"/>
+                <text x="282" y="320" font-size="11" fill="white" text-anchor="middle">Península Ibérica</text>
+                <text x="282" y="335" font-size="9" fill="#ffd700">🏹${territories.find(t=>t.id==='iberia').tropas.arqueiro} 🔱${territories.find(t=>t.id==='iberia').tropas.lanceiro} 🐎${territories.find(t=>t.id==='iberia').tropas.cavaleiro}</text>
+                
+                <!-- Itália -->
+                <path d="M400,270 Q430,260 450,290 Q460,330 440,360 Q420,370 400,350 Q390,320 400,270 Z" fill="${REINOS[territories.find(t=>t.id==='italia').dono].cor}" stroke="#d4af37" stroke-width="2" class="territory" data-terr-id="italia" opacity="0.9"/>
+                <text x="428" y="315" font-size="11" fill="white" text-anchor="middle">Itália</text>
+                <text x="428" y="330" font-size="9" fill="#ffd700">🏹${territories.find(t=>t.id==='italia').tropas.arqueiro} 🔱${territories.find(t=>t.id==='italia').tropas.lanceiro} 🐎${territories.find(t=>t.id==='italia').tropas.cavaleiro}</text>
+                
+                <!-- Alemanha -->
+                <path d="M440,160 Q480,150 500,180 Q510,220 480,240 Q450,250 440,220 Q430,190 440,160 Z" fill="${REINOS[territories.find(t=>t.id==='alemanha').dono].cor}" stroke="#d4af37" stroke-width="2" class="territory" data-terr-id="alemanha" opacity="0.9"/>
+                <text x="470" y="200" font-size="12" fill="white" text-anchor="middle">Germânia</text>
+                <text x="470" y="215" font-size="9" fill="#ffd700">🏹${territories.find(t=>t.id==='alemanha').tropas.arqueiro} 🔱${territories.find(t=>t.id==='alemanha').tropas.lanceiro} 🐎${territories.find(t=>t.id==='alemanha').tropas.cavaleiro}</text>
+                
+                <!-- Polônia -->
+                <path d="M550,180 Q590,170 610,200 Q620,240 590,260 Q560,270 550,240 Q540,210 550,180 Z" fill="${REINOS[territories.find(t=>t.id==='polonia').dono].cor}" stroke="#d4af37" stroke-width="2" class="territory" data-terr-id="polonia" opacity="0.9"/>
+                <text x="580" y="220" font-size="11" fill="white" text-anchor="middle">Polônia</text>
+                <text x="580" y="235" font-size="9" fill="#ffd700">🏹${territories.find(t=>t.id==='polonia').tropas.arqueiro} 🔱${territories.find(t=>t.id==='polonia').tropas.lanceiro} 🐎${territories.find(t=>t.id==='polonia').tropas.cavaleiro}</text>
+                
+                <!-- Balcãs -->
+                <path d="M510,290 Q540,280 560,310 Q570,350 550,370 Q520,380 510,350 Q500,320 510,290 Z" fill="${REINOS[territories.find(t=>t.id==='balcanicos').dono].cor}" stroke="#d4af37" stroke-width="2" class="territory" data-terr-id="balcanicos" opacity="0.9"/>
+                <text x="538" y="335" font-size="11" fill="white" text-anchor="middle">Balcãs</text>
+                <text x="538" y="350" font-size="9" fill="#ffd700">🏹${territories.find(t=>t.id==='balcanicos').tropas.arqueiro} 🔱${territories.find(t=>t.id==='balcanicos').tropas.lanceiro} 🐎${territories.find(t=>t.id==='balcanicos').tropas.cavaleiro}</text>
+                
+                <!-- Rússia -->
+                <path d="M660,110 Q720,100 750,140 Q760,190 720,210 Q680,220 660,190 Q640,150 660,110 Z" fill="${REINOS[territories.find(t=>t.id==='russia').dono].cor}" stroke="#d4af37" stroke-width="2" class="territory" data-terr-id="russia" opacity="0.9"/>
+                <text x="705" y="160" font-size="11" fill="white" text-anchor="middle">Rússia Ocidental</text>
+                <text x="705" y="175" font-size="9" fill="#ffd700">🏹${territories.find(t=>t.id==='russia').tropas.arqueiro} 🔱${territories.find(t=>t.id==='russia').tropas.lanceiro} 🐎${territories.find(t=>t.id==='russia').tropas.cavaleiro}</text>
+            </svg>
+        `;
+    }
+
+    function render() {
+        const root = document.getElementById('gameRoot');
+        if (!root) return;
+        
+        if (waitingForQuiz && currentQuiz) {
+            root.innerHTML = `
+                <div class="quiz-overlay">
+                    <div class="quiz-card">
+                        <h2>📜 ${currentQuiz.conceito} - DESAFIO REAL!</h2>
+                        <div style="font-size: 1.6rem; margin: 25px;">${currentQuiz.pergunta}</div>
+                        ${currentQuiz.opcoes.map((opt, i) => `<div class="quiz-option" onclick="window.checkQuizAnswer(${i})">${opt}</div>`).join('')}
+                    </div>
+                </div>
+            `;
+            return;
+        }
+        
+        const ownedCount = territories.filter(t => t.dono === 0).length;
+        const currentReino = REINOS[currentPlayer];
+        
+        root.innerHTML = `
+            <div>
+                <div class="game-header">
+                    <div class="player-info">
+                        🎮 JOGADOR: REINO DO NORTE ❄️
+                    </div>
+                    <div class="resources">
+                        <div class="resource-card">💰 Ouro: ${gold}</div>
+                        <div class="resource-card">🏰 Territórios: ${ownedCount}/9</div>
+                        <div class="resource-card">📅 Turno: ${turn}</div>
+                    </div>
+                    <div class="turn-indicator">
+                        ${currentPlayer === 0 ? '⚡ SEU TURNO ⚡' : `🤖 Turno: ${currentReino.nome} ${currentReino.icone}`}
+                    </div>
+                </div>
+                
+                <div class="europe-map" id="mapContainer">
+                    ${renderMap()}
+                </div>
+                
+                <div class="troops-panel">
+                    ${Object.entries(TROPAS).map(([key, troop]) => `
+                        <div class="troop-card" onclick="window.recruitTroop('${key}')">
+                            <div class="troop-icon">${troop.icone}</div>
+                            <div><strong>${troop.nome}</strong></div>
+                            <div class="troop-stats">⚔️ ${troop.atk} | 🛡️ ${troop.def}</div>
+                            <div class="troop-cost">💰 ${troop.custo}</div>
+                            <div>📦 ${playerTroops[key]} unid.</div>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div class="battle-log">
+                    ${battleLog.map(log => `<div>${log}</div>`).join('')}
+                    <div style="color:#ffaa44; margin-top:5px;">💬 ${message}</div>
+                </div>
+                
+                <div style="display: flex; gap: 15px; justify-content: center;">
+                    <button class="btn btn-primary" onclick="window.endTurn()">⏩ FINALIZAR TURNO</button>
+                    <button class="btn" onclick="window.resetGame()">🔄 NOVO JOGO</button>
+                </div>
+            </div>
+        `;
+        
+        // Adicionar eventos de clique nos territórios
+        setTimeout(() => {
+            territories.forEach(terr => {
+                const el = document.querySelector(`[data-terr-id="${terr.id}"]`);
+                if (el && currentPlayer === 0 && !gameOver && !waitingForQuiz && terr.dono === currentPlayer) {
+                    el.style.cursor = 'pointer';
+                    el.onclick = () => {
+                        if (terr.dono === currentPlayer) {
+                            message = `Selecione um território INIMIGO para atacar! ${terr.nome} é seu.`;
+                            render();
+                        }
+                    };
+                } else if (el && currentPlayer === 0 && !gameOver && !waitingForQuiz && terr.dono !== currentPlayer) {
+                    el.style.cursor = 'pointer';
+                    el.onclick = () => {
+                        const playerTerritory = territories.find(t => t.dono === 0);
+                        if (playerTerritory) {
+                            initiateAttackFromTerritory(playerTerritory, terr);
+                        } else {
+                            message = "Você perdeu todos os territórios!";
+                            render();
+                        }
+                    };
+                }
+            });
+        }, 50);
+    }
+    
+    // Bind globais
+    window.recruitTroop = recruitTroop;
+    window.endTurn = endTurn;
+    window.resetGame = resetGame;
+    window.checkQuizAnswer = checkQuizAnswer;
+    
+    addLog("🎮 Jogo iniciado! Conquiste a Europa com conhecimento!");
+    render();
+</script>
+</body>
+</html>

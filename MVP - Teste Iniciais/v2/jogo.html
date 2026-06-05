@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Reinos em Estratégia - Guerra Pedagógica</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a472a 0%, #0e2a1a 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', 'MedievalSharp', 'Georgia', serif;
+            padding: 20px;
+        }
+
+        /* Container principal do jogo */
+        .game-container {
+            background: #2c1810;
+            background-image: radial-gradient(circle at 10% 20%, rgba(60, 40, 20, 0.6) 0%, rgba(30, 20, 10, 0.9) 100%);
+            border-radius: 48px;
+            padding: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+            border: 2px solid #c9a87b;
+        }
+
+        .game-panel {
+            background: #fdf5e6;
+            background-image: linear-gradient(to bottom, #fff8f0, #f0e6d0);
+            border-radius: 32px;
+            padding: 24px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.05), 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        /* Tela principal do jogo */
+        .game-screen {
+            min-width: 900px;
+            max-width: 1200px;
+        }
+
+        /* Header com recursos */
+        .resources {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .resource-card {
+            background: #2c1a0e;
+            border-radius: 60px;
+            padding: 10px 25px;
+            color: #ffd966;
+            font-weight: bold;
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.5), 0 2px 5px rgba(0,0,0,0.2);
+            border-bottom: 3px solid #c9a87b;
+        }
+
+        .resource-card span:first-child {
+            font-size: 1.8rem;
+        }
+
+        .resource-card .value {
+            color: #ffaa33;
+            font-size: 1.8rem;
+            font-family: monospace;
+            text-shadow: 0 0 5px #ffaa33;
+        }
+
+        /* Mapa de territórios */
+        .map {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 25px 0;
+            background: #6b4c3b;
+            padding: 20px;
+            border-radius: 40px;
+            background-image: radial-gradient(circle at 20% 30%, #8b5e3c 2%, transparent 2.5%);
+            background-size: 30px 30px;
+            border: 2px solid #c9a87b;
+        }
+
+        .territory {
+            background: linear-gradient(145deg, #e8d5b5, #d4bc94);
+            border-radius: 20px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid #aa8c54;
+            box-shadow: 0 5px 0 #7a5a3a;
+            position: relative;
+        }
+
+        .territory:hover:not(.disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 0 #7a5a3a;
+            background: linear-gradient(145deg, #f5e6c8, #e0c8a0);
+        }
+
+        .territory.disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            filter: grayscale(0.2);
+        }
+
+        .territory.player {
+            background: linear-gradient(145deg, #6aa9ff, #3d7acc);
+            border-color: #ffd700;
+            color: white;
+            text-shadow: 1px 1px 0 #000;
+        }
+
+        .territory-name {
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 8px;
+        }
+
+        .territory-owner {
+            font-size: 0.8rem;
+            background: rgba(0,0,0,0.5);
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            color: white;
+            margin-top: 5px;
+        }
+
+        /* Área de recrutamento */
+        .recruit-area {
+            background: #e8dccc;
+            border-radius: 28px;
+            padding: 20px;
+            margin: 20px 0;
+            display: flex;
+            gap: 25px;
+            justify-content: center;
+            flex-wrap: wrap;
+            border: 1px solid #c9a87b;
+        }
+
+        .troop-card {
+            background: #fcf5e6;
+            border-radius: 24px;
+            padding: 15px;
+            text-align: center;
+            width: 160px;
+            cursor: pointer;
+            transition: all 0.15s;
+            border: 2px solid #d4b87a;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .troop-card:active {
+            transform: scale(0.97);
+        }
+
+        .troop-card h3 {
+            color: #5a3a1a;
+            margin-bottom: 8px;
+        }
+
+        .troop-stats {
+            font-size: 0.8rem;
+            color: #6b4c2c;
+        }
+
+        .troop-cost {
+            background: #ffd966;
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            margin-top: 8px;
+            font-weight: bold;
+        }
+
+        .btn {
+            background: #4a6a2a;
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 40px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            margin: 5px;
+            box-shadow: 0 4px 0 #2a3a1a;
+        }
+
+        .btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #2a3a1a;
+        }
+
+        .btn-danger {
+            background: #8b3a2a;
+            box-shadow: 0 4px 0 #5a2a1a;
+        }
+
+        .feedback {
+            background: #2a1a0a;
+            color: #ffdd99;
+            padding: 15px;
+            border-radius: 40px;
+            margin: 15px 0;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1rem;
+            animation: pulse 0.5s;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0; transform: scale(0.95);}
+            100% { opacity: 1; transform: scale(1);}
+        }
+
+        /* Modal do Quiz */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .quiz-box {
+            background: #fdf5e6;
+            border-radius: 48px;
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            border: 4px solid #c9a87b;
+            box-shadow: 0 20px 40px black;
+        }
+
+        .quiz-question {
+            font-size: 1.5rem;
+            margin: 20px 0;
+            color: #2c1a0e;
+        }
+
+        .quiz-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 25px 0;
+        }
+
+        .quiz-opt {
+            background: #e0d0b0;
+            padding: 12px;
+            border-radius: 60px;
+            cursor: pointer;
+            transition: all 0.1s;
+            font-weight: bold;
+        }
+
+        .quiz-opt:active {
+            background: #c9b080;
+            transform: scale(0.98);
+        }
+
+        .next-turn-btn {
+            background: #ff9933;
+            font-size: 1.3rem;
+            padding: 15px 30px;
+            margin-top: 20px;
+            width: 100%;
+        }
+
+        .victory {
+            text-align: center;
+            background: gold;
+            color: darkgreen;
+            padding: 20px;
+            border-radius: 30px;
+            font-size: 1.8rem;
+        }
+    </style>
+</head>
+<body>
+<div class="game-container">
+    <div class="game-panel">
+        <div class="game-screen" id="gameScreen">
+            <!-- Conteúdo dinâmico via JS -->
+        </div>
+    </div>
+</div>
+
+<script>
+    // ==================== CONFIGURAÇÕES DO JOGO ====================
+    const REINOS = ['Norte 🔵', 'Sul 🔴', 'Leste 🟢', 'Oeste 🟡'];
+    const TROPAS = {
+        arqueiro: { nome: '🏹 Arqueiro', custo: 30, atk: 40, def: 10, qtd: 0 },
+        lanceiro: { nome: '🔱 Lanceiro', custo: 50, atk: 45, def: 35, qtd: 0 },
+        cavaleiro: { nome: '🐎 Cavaleiro', custo: 80, atk: 60, def: 50, qtd: 0 }
+    };
+
+    // Territórios (mapa 3x2 = 6 territórios)
+    let territories = [
+        { id: 0, nome: 'Montanhas Gélidas', dono: 0, tropas: { arqueiro: 3, lanceiro: 2, cavaleiro: 1 } },
+        { id: 1, nome: 'Vale Verdejante', dono: 1, tropas: { arqueiro: 2, lanceiro: 3, cavaleiro: 1 } },
+        { id: 2, nome: 'Floresta Antiga', dono: 2, tropas: { arqueiro: 4, lanceiro: 1, cavaleiro: 1 } },
+        { id: 3, nome: 'Deserto Ardente', dono: 3, tropas: { arqueiro: 2, lanceiro: 2, cavaleiro: 2 } },
+        { id: 4, nome: 'Planícies Centrais', dono: 0, tropas: { arqueiro: 1, lanceiro: 1, cavaleiro: 1 } },
+        { id: 5, nome: 'Porto Livre', dono: 1, tropas: { arqueiro: 3, lanceiro: 3, cavaleiro: 0 } }
+    ];
+
+    // Banco de perguntas (conceitos pedagógicos)
+    const quizDB = [
+        { pergunta: "Se cada CAVALEIRO custa 80 de ouro, quantos você pode comprar com 240 de ouro?", opcoes: ["2", "3", "4", "5"], correta: 1, conceito: "Divisão básica" },
+        { pergunta: "Um ARQUEIRO tem custo 30. Qual o custo de 5 arqueiros?", opcoes: ["120", "150", "180", "200"], correta: 1, conceito: "Multiplicação" },
+        { pergunta: "Você tem 3 lanceiros (custo 50 cada) e 2 arqueiros (30 cada). Gasto total?", opcoes: ["180", "210", "240", "270"], correta: 1, conceito: "Soma ponderada" },
+        { pergunta: "Se a defesa do seu exército é 10 por arqueiro + 50 por cavaleiro. Com 2 arqueiros e 1 cavaleiro, qual a defesa TOTAL?", opcoes: ["50", "60", "70", "80"], correta: 2, conceito: "Função linear" },
+        { pergunta: "Para conquistar um território inimigo, você precisa de 80 de ataque. Seus arqueiros dão 40 de ataque cada. Quantos precisa no mínimo?", opcoes: ["1", "2", "3", "4"], correta: 1, conceito: "Inequação" },
+        { pergunta: "Se cada turno você ganha 20 de ouro por território. Com 3 territórios, quanto ganha por turno?", opcoes: ["40", "50", "60", "70"], correta: 2, conceito: "Multiplicação" },
+        { pergunta: "Para cada 2 arqueiros, você precisa de 1 lanceiro (proporção 2:1). Com 6 arqueiros, quantos lanceiros?", opcoes: ["2", "3", "4", "5"], correta: 1, conceito: "Razão e proporção" },
+        { pergunta: "Um cavaleiro ignora 20% da defesa inimiga. Se inimigo tem defesa 50, quanto é ignorado?", opcoes: ["5", "10", "15", "20"], correta: 1, conceito: "Porcentagem" }
+    ];
+
+    let currentPlayer = 0;          // 0 = Norte (jogador), 1..3 = IA
+    let gold = 200;
+    let playerTroops = { arqueiro: 3, lanceiro: 3, cavaleiro: 3 };
+    let turn = 1;
+    let selectedTerritoryForAttack = null;
+    let gameOver = false;
+    let message = "Bem-vindo! Clique em um território inimigo para atacar!";
+    let quizActive = false;
+    let currentQuiz = null;
+    let attackTargetTerritory = null;
+    let waitingQuiz = false;
+    let conqueredThisTurn = false;
+    let consecutiveErrors = 0;
+
+    // Helper para calcular ataque/defesa do exército
+    function calculateArmyPower(troops, type = 'atk') {
+        let total = 0;
+        total += troops.arqueiro * (type === 'atk' ? TROPAS.arqueiro.atk : TROPAS.arqueiro.def);
+        total += troops.lanceiro * (type === 'atk' ? TROPAS.lanceiro.atk : TROPAS.lanceiro.def);
+        total += troops.cavaleiro * (type === 'atk' ? TROPAS.cavaleiro.atk : TROPAS.cavaleiro.def);
+        if (type === 'atk' && troops.cavaleiro > 0) total += Math.floor(troops.cavaleiro * 0.2 * (troops.cavaleiro * 5));
+        return total;
+    }
+
+    function getTerritoryTroops(terr) {
+        return terr.tropas;
+    }
+
+    function updateTerritoryTroops(terr, newTroops) {
+        terr.tropas = { ...newTroops };
+    }
+
+    // Simular IA (movimentos simples)
+    function aiTurn() {
+        if (gameOver) return;
+        message = `🤖 Turno da IA: ${REINOS[currentPlayer]} está se preparando...`;
+        renderGame();
+
+        // IA coleta recursos (ganho base por território)
+        let owned = territories.filter(t => t.dono === currentPlayer).length;
+        let gain = owned * 20;
+        // IA não tem ouro propriamente, mas vamos simular recrutamento básico
+        // Para simplificar, IA só ataca se tiver chance
+        setTimeout(() => {
+            let enemyTerritories = territories.filter(t => t.dono !== currentPlayer);
+            if (enemyTerritories.length > 0 && Math.random() > 0.4) {
+                let target = enemyTerritories[Math.floor(Math.random() * enemyTerritories.length)];
+                let attackerPower = calculateArmyPower(getTerritoryTroops(territories.find(t => t.dono === currentPlayer)), 'atk');
+                let defenderPower = calculateArmyPower(getTerritoryTroops(target), 'def');
+                if (attackerPower > defenderPower) {
+                    target.dono = currentPlayer;
+                    message = `⚔️ ${REINOS[currentPlayer]} conquistou ${target.nome}!`;
+                } else {
+                    message = `❌ ${REINOS[currentPlayer]} falhou ao atacar ${target.nome}.`;
+                }
+            } else {
+                message = `⏸️ ${REINOS[currentPlayer]} optou por não atacar.`;
+            }
+            nextPlayer();
+        }, 1200);
+    }
+
+    function nextPlayer() {
+        if (gameOver) return;
+        currentPlayer = (currentPlayer + 1) % 4;
+        if (currentPlayer === 0) {
+            // Turno do jogador humano
+            turn++;
+            // Ganho de ouro
+            let ownedTerr = territories.filter(t => t.dono === 0).length;
+            gold += ownedTerr * 20;
+            message = `🌞 Turno ${turn} - Seu reino! +${ownedTerr * 20} de ouro. Recrute tropas e ataque!`;
+            conqueredThisTurn = false;
+            consecutiveErrors = 0;
+            renderGame();
+        } else {
+            aiTurn();
+        }
+        checkVictory();
+        renderGame();
+    }
+
+    function checkVictory() {
+        let playerCount = territories.filter(t => t.dono === 0).length;
+        if (playerCount >= 5) {
+            gameOver = true;
+            message = "🏆 VITÓRIA! Você unificou os reinos com sabedoria e conhecimento! 🏆";
+            renderGame();
+            return true;
+        }
+        let aiDominant = territories.filter(t => t.dono !== 0).length;
+        if (aiDominant >= 5 && !gameOver) {
+            gameOver = true;
+            message = "💀 Derrota! Os outros reinos dominaram. Recomece o jogo para tentar novamente!";
+            renderGame();
+            return true;
+        }
+        return false;
+    }
+
+    // Função de ataque com quiz
+    function initiateAttack(territory) {
+        if (gameOver) return false;
+        if (territory.dono === currentPlayer) {
+            message = "Este território já é seu! Escolha um inimigo.";
+            renderGame();
+            return false;
+        }
+        if (currentPlayer !== 0) {
+            message = "Aguarde seu turno!";
+            renderGame();
+            return false;
+        }
+        if (conqueredThisTurn) {
+            message = "Você já conquistou um território neste turno! Finalize o turno.";
+            renderGame();
+            return false;
+        }
+
+        // Força de ataque baseada no exército do jogador (usando tropas gerais dele + tropas do territorio base)
+        let playerPower = calculateArmyPower(playerTroops, 'atk');
+        let defenderPower = calculateArmyPower(territory.tropas, 'def');
+
+        if (playerPower <= defenderPower) {
+            message = `Seu exército é fraco (força ${playerPower} vs ${defenderPower}). Recrute mais tropas!`;
+            renderGame();
+            return false;
+        }
+
+        // Disparar quiz
+        attackTargetTerritory = territory;
+        showRandomQuiz();
+        return true;
+    }
+
+    function showRandomQuiz() {
+        currentQuiz = { ...quizDB[Math.floor(Math.random() * quizDB.length)] };
+        quizActive = true;
+        renderQuizModal();
+    }
+
+    function checkQuizAnswer(selectedIdx) {
+        if (!quizActive) return;
+        let isCorrect = (selectedIdx === currentQuiz.correta);
+        if (isCorrect) {
+            message = `✅ Correto! +10 de moral! Seu ataque foi bem sucedido! Conquistou ${attackTargetTerritory.nome}.`;
+            // Conquistar território
+            attackTargetTerritory.dono = currentPlayer;
+            // Ganha tropas bônus
+            playerTroops.arqueiro += 1;
+            gold += 30;
+            conqueredThisTurn = true;
+            consecutiveErrors = 0;
+            // Pequeno bônus no aprendizado
+            message += ` +1 Arqueiro de recompensa!`;
+            checkVictory();
+        } else {
+            consecutiveErrors++;
+            message = `❌ Errado! A resposta correta era: ${currentQuiz.opcoes[currentQuiz.correta]}. Você perde 5 de ouro e o ataque falhou!`;
+            gold = Math.max(0, gold - 5);
+            if (consecutiveErrors >= 3) {
+                // Perde um território aleatório
+                let playerTerritories = territories.filter(t => t.dono === 0);
+                if (playerTerritories.length > 1) {
+                    let loseTerr = playerTerritories[Math.floor(Math.random() * playerTerritories.length)];
+                    loseTerr.dono = (loseTerr.id % 3) + 1;
+                    message += ` 😭 Seus erros consecutivos fizeram você perder ${loseTerr.nome}!`;
+                }
+            }
+        }
+        quizActive = false;
+        attackTargetTerritory = null;
+        renderGame();
+    }
+
+    function recruitTroop(type) {
+        if (gameOver) return;
+        if (currentPlayer !== 0) {
+            message = "Aguarde seu turno!";
+            renderGame();
+            return;
+        }
+        let custo = TROPAS[type].custo;
+        if (gold >= custo) {
+            gold -= custo;
+            playerTroops[type]++;
+            message = `✨ Recrutado 1 ${TROPAS[type].nome}! ✨`;
+        } else {
+            message = `Ouro insuficiente! Faltam ${custo - gold} de ouro.`;
+        }
+        renderGame();
+    }
+
+    function endTurn() {
+        if (gameOver) return;
+        if (currentPlayer !== 0) {
+            message = "Não é seu turno!";
+            renderGame();
+            return;
+        }
+        nextPlayer();
+    }
+
+    function resetGame() {
+        // reset all
+        territories = [
+            { id: 0, nome: 'Montanhas Gélidas', dono: 0, tropas: { arqueiro: 3, lanceiro: 2, cavaleiro: 1 } },
+            { id: 1, nome: 'Vale Verdejante', dono: 1, tropas: { arqueiro: 2, lanceiro: 3, cavaleiro: 1 } },
+            { id: 2, nome: 'Floresta Antiga', dono: 2, tropas: { arqueiro: 4, lanceiro: 1, cavaleiro: 1 } },
+            { id: 3, nome: 'Deserto Ardente', dono: 3, tropas: { arqueiro: 2, lanceiro: 2, cavaleiro: 2 } },
+            { id: 4, nome: 'Planícies Centrais', dono: 0, tropas: { arqueiro: 1, lanceiro: 1, cavaleiro: 1 } },
+            { id: 5, nome: 'Porto Livre', dono: 1, tropas: { arqueiro: 3, lanceiro: 3, cavaleiro: 0 } }
+        ];
+        currentPlayer = 0;
+        gold = 200;
+        playerTroops = { arqueiro: 3, lanceiro: 3, cavaleiro: 3 };
+        turn = 1;
+        gameOver = false;
+        message = "🔄 Jogo reiniciado! Domine os reinos com inteligência!";
+        conqueredThisTurn = false;
+        consecutiveErrors = 0;
+        renderGame();
+    }
+
+    // ==================== RENDERIZAÇÃO DA INTERFACE ====================
+    function renderGame() {
+        const screen = document.getElementById('gameScreen');
+        if (!screen) return;
+
+        if (quizActive) {
+            renderQuizModal();
+            return;
+        }
+
+        let ownedCount = territories.filter(t => t.dono === 0).length;
+        let html = `
+            <div style="text-align:center;">
+                <h2 style="color:#3a2a1a;">🏰 REINOS EM ESTRATÉGIA - GUERRA PEDAGÓGICA 🏰</h2>
+                <div class="resources">
+                    <div class="resource-card"><span>💰</span> Ouro: <span class="value">${gold}</span></div>
+                    <div class="resource-card"><span>🗺️</span> Territórios: <span class="value">${ownedCount}/6</span></div>
+                    <div class="resource-card"><span>📅</span> Turno: <span class="value">${turn}</span></div>
+                </div>
+                <div class="feedback">📢 ${message}</div>
+                <div class="map">
+        `;
+        territories.forEach(terr => {
+            let donoNome = REINOS[terr.dono];
+            let classeExtra = (terr.dono === 0) ? 'player' : '';
+            html += `
+                <div class="territory ${classeExtra}" onclick="window.initiateAttack && window.initiateAttack(${terr.id})">
+                    <div class="territory-name">🏰 ${terr.nome}</div>
+                    <div class="territory-owner">${donoNome}</div>
+                    <div style="font-size:11px; margin-top:8px;">🐉 ${terr.tropas.arqueiro}🏹 ${terr.tropas.lanceiro}🔱 ${terr.tropas.cavaleiro}🐎</div>
+                </div>
+            `;
+        });
+        html += `</div><div class="recruit-area"><h3 style="width:100%">⚔️ RECRUTAR TROPAS (Clique na unidade) ⚔️</h3>`;
+        for (let [tipo, stats] of Object.entries(TROPAS)) {
+            let qtdAtual = playerTroops[tipo];
+            html += `
+                <div class="troop-card" onclick="window.recruitTroop && window.recruitTroop('${tipo}')">
+                    <h3>${stats.nome}</h3>
+                    <div class="troop-stats">⚔️ Ataque ${stats.atk} | 🛡️ Defesa ${stats.def}</div>
+                    <div class="troop-cost">💰 ${stats.custo} ouro</div>
+                    <div>📦 ${qtdAtual} unidades</div>
+                </div>
+            `;
+        }
+        html += `</div><div style="display: flex; gap: 20px; justify-content: center; margin-top: 20px;">
+                    <button class="btn" onclick="window.endTurn()">⏩ FINALIZAR TURNO</button>
+                    <button class="btn btn-danger" onclick="window.resetGame()">🔄 NOVO JOGO</button>
+                 </div>`;
+        if (gameOver) {
+            html += `<div class="victory">${message.includes("VITÓRIA") ? "🏆 PARABÉNS! VOCÊ VENCEU! 🏆" : "💀 FIM DE JOGO - Tente novamente! 💀"}</div>`;
+        }
+        screen.innerHTML = html;
+    }
+
+    function renderQuizModal() {
+        if (!currentQuiz) return;
+        const screen = document.getElementById('gameScreen');
+        let optsHtml = '';
+        currentQuiz.opcoes.forEach((opt, idx) => {
+            optsHtml += `<div class="quiz-opt" onclick="window.checkQuizAnswer(${idx})">${opt}</div>`;
+        });
+        screen.innerHTML = `
+            <div class="modal">
+                <div class="quiz-box">
+                    <h2>📜 DESAFIO DO CONHECIMENTO!</h2>
+                    <div class="quiz-question">${currentQuiz.pergunta}</div>
+                    <div class="quiz-options">${optsHtml}</div>
+                    <p style="margin-top:20px; font-size:12px;">Conceito: ${currentQuiz.conceito}</p>
+                </div>
+            </div>
+        `;
+    }
+
+    // bind globals
+    window.initiateAttack = (id) => {
+        let terr = territories.find(t => t.id === id);
+        if (terr) initiateAttack(terr);
+    };
+    window.recruitTroop = recruitTroop;
+    window.endTurn = endTurn;
+    window.resetGame = resetGame;
+    window.checkQuizAnswer = checkQuizAnswer;
+    
+    // Start
+    renderGame();
+</script>
+</body>
+</html>
