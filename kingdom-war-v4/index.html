@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Kingdom War — Estratégia & Conquista. Projeto UniSENAI 0001-26." />
+    <title>Kingdom War</title>
+    <style>
+      /* Reset mínimo para o jogo ocupar 100% da tela */
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body, #root { width: 100%; height: 100%; overflow: hidden; }
+      body { background: #0a0a08; }
+
+      /* Animações globais usadas nos componentes */
+      @keyframes fadeInUp {
+        from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+        to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+      }
+      @keyframes pulse {
+        from { opacity: 1; }
+        to   { opacity: 0.4; }
+      }
+
+      /* Scrollbar custom para o painel lateral */
+      ::-webkit-scrollbar { width: 4px; height: 4px; }
+      ::-webkit-scrollbar-track { background: #0a0a08; }
+      ::-webkit-scrollbar-thumb { background: #2a2a1a; border-radius: 2px; }
+      ::-webkit-scrollbar-thumb:hover { background: #3a3a2a; }
+
+      /* Seleção de texto desabilitada no jogo */
+      #root { user-select: none; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
